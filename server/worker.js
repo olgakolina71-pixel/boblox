@@ -78,7 +78,7 @@ export default {
       if (!profileResponse.ok) return fail("Профиль не найден", 401);
       const profile = await profileResponse.json();
       const target = env.BLOCKVERSE.getByName("room:" + worldId);
-      const internalUrl = new URL(request.url); internalUrl.searchParams.set("userId", auth.userId); internalUrl.searchParams.set("username", profile.username); internalUrl.searchParams.set("avatar", profile.avatar);
+      const internalUrl = new URL(request.url); internalUrl.pathname = "/room"; internalUrl.searchParams.set("userId", auth.userId); internalUrl.searchParams.set("username", profile.username); internalUrl.searchParams.set("avatar", profile.avatar);
       return target.fetch(new Request(internalUrl, request));
     }
     return fail("Маршрут не найден", 404);
@@ -143,7 +143,6 @@ export class BlockverseDurable extends DurableObject {
       const message = { id: crypto.randomUUID(), userId: player.id, username: player.username, avatar: player.avatar, text, createdAt: new Date(now).toISOString() };
       const history = await this.ctx.storage.get("chat") || []; history.push(message); await this.ctx.storage.put("chat", history.slice(-100));
       this.broadcast({ type: "chat", message });
-      try { ws.send(JSON.stringify({ type: "chat", message })); } catch {}
     }
   }
   async webSocketClose(ws) { let p; try { p = ws.deserializeAttachment(); } catch {} if (p) this.broadcast({ type: "player_left", id: p.id }); }
