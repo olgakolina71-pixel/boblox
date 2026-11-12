@@ -43,6 +43,12 @@ export default {
       const r = await forward(env.BLOCKVERSE.getByName("registry"), "/worlds", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, mode, description: String(data.description || "").slice(0, 120), ownerId: auth.userId }) });
       const result = await r.json(); return json(result, r.status, headers);
     }
+    const deleteWorldMatch = url.pathname.match(/^\/api\/worlds\/([a-z0-9-]+)$/);
+    if (deleteWorldMatch && request.method === "DELETE") {
+      const auth = await userContext(request, env); if (!auth) return fail("Сессия не найдена", 401);
+      const r = await forward(env.BLOCKVERSE.getByName("registry"), "/worlds/" + deleteWorldMatch[1] + "?ownerId=" + auth.userId, { method: "DELETE" });
+      return new Response(await r.text(), { status: r.status, headers: { ...JSON_HEADERS, ...headers } });
+    }
     const stateMatch = url.pathname.match(/^\/api\/worlds\/([a-z0-9-]+)\/state$/);
     if (stateMatch && (request.method === "GET" || request.method === "PATCH")) {
       const auth = await userContext(request, env); if (!auth) return fail("Сессия не найдена", 401);
@@ -106,6 +112,13 @@ export class BlockverseDurable extends DurableObject {
       const profile = await this.ctx.storage.get("profile"); if (!profile) return fail("Профиль не найден", 404);
       if (request.method === "GET") return json({ friends: profile.friends || [] });
       if (request.method === "POST") { const friend = await request.json(); const friends = profile.friends || []; if (friends.some(x => x.id === friend.id)) return fail("Игрок уже в друзьях", 409); friends.push({ id: friend.id, username: friend.username, avatar: friend.avatar, addedAt: new Date().toISOString() }); profile.friends = friends.slice(-200); await this.ctx.storage.put("profile", profile); return json({ friends: profile.friends }, 201); }
+    }
+    if (url.pathname.startsWith("/worlds/") && request.method === "DELETE") {
+      const id = url.pathname.slice("/worlds/".length), ownerId = url.searchParams.get("ownerId") || "";
+      const worlds = await this.ctx.storage.get("worlds") || [], index = worlds.findIndex(item => item.id === id && item.ownerId === ownerId);
+      if (index < 0) return fail("Мир не найден или нет прав на удаление", 404);
+      worlds.splice(index, 1); await this.ctx.storage.put("worlds", worlds); await this.ctx.storage.delete("world-state:" + id);
+      return json({ deleted: true, id });
     }
     if (url.pathname === "/world-state") {
       const id = url.searchParams.get("id") || "", ownerId = url.searchParams.get("ownerId") || "";
