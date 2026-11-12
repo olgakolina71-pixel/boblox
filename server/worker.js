@@ -15,7 +15,7 @@ function originAllowed(origin) { return !origin || /^https:\/\/(?:blockverse-2\.
 function cors(request) { const origin = request.headers.get("Origin") || ""; if (!originAllowed(origin)) return {}; return { "access-control-allow-origin": origin || "https://blockverse-2.pages.dev", "access-control-allow-methods": "GET,POST,PATCH,OPTIONS", "access-control-allow-headers": "Content-Type,Authorization", "vary": "Origin" }; }
 async function bodyJson(request, limit = 8192) { const text = await request.text(); if (text.length > limit) throw new Error("Request body too large"); return text ? JSON.parse(text) : {}; }
 function bearer(request) { const value = request.headers.get("Authorization") || ""; return value.startsWith("Bearer ") ? value.slice(7).trim() : ""; }
-async function userContext(request, env) { const token = bearer(request); if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return null; const userId = await digest(token); return { token, userId, stub: env.BLOCKVERSE.getByName("user:" + userId) }; }
+async function userContext(request, env) { const requestUrl = new URL(request.url); const token = bearer(request) || (requestUrl.pathname === "/ws" ? requestUrl.searchParams.get("token") || "" : ""); if (!/^[A-Za-z0-9_-]{40,60}$/.test(token)) return null; const userId = await digest(token); return { token, userId, stub: env.BLOCKVERSE.getByName("user:" + userId) }; }
 async function forward(stub, path, init = {}) { return stub.fetch("https://internal" + path, init); }
 
 export default {
