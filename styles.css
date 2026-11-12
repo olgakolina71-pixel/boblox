@@ -13,3 +13,10 @@
 
 .touch-controls{display:none;pointer-events:none}.move-pad{pointer-events:auto;touch-action:none;position:absolute;left:16px;bottom:16px;width:112px;height:112px;border:1px solid #c3c9ff66;border-radius:50%;background:#11182b99;display:grid;place-items:center}.move-pad span{width:42px;height:42px;border-radius:50%;background:linear-gradient(145deg,#d5c9ff,#8a72ef);box-shadow:0 4px 15px #0008;transition:transform .04s}
 @media(max-width:720px){.touch-controls{display:block;position:relative;height:0}.move-pad{bottom:128px;left:12px;width:96px;height:96px}.move-pad span{width:38px;height:38px}}
+
+/* Playable session objective and touch jump */
+.page-content:has(#game-canvas){position:relative}
+.game-objective{padding:7px 11px;border:1px solid #58d8ff55;border-radius:8px;background:#1b3a4a;color:#8de7ff;font-weight:800}
+.jump-btn{pointer-events:auto;position:absolute;right:16px;bottom:132px;width:86px;height:86px;border-radius:50%;border:1px solid #c4b4ff99;background:linear-gradient(145deg,#9b7cff,#5544c9);box-shadow:0 7px 22px #0008;color:white;font-size:10px;font-weight:900;letter-spacing:.5px;touch-action:none}
+.jump-btn:active{transform:scale(.94);filter:brightness(1.2)}
+@media(max-width:720px){.game-objective{order:3}.jump-btn{right:12px;bottom:130px;width:76px;height:76px}.game-hud{justify-content:flex-start}}
