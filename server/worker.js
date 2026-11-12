@@ -43,6 +43,14 @@ export default {
       const r = await forward(env.BLOCKVERSE.getByName("registry"), "/worlds", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, mode, description: String(data.description || "").slice(0, 120), ownerId: auth.userId }) });
       const result = await r.json(); return json(result, r.status, headers);
     }
+    const stateMatch = url.pathname.match(/^\/api\/worlds\/([a-z0-9-]+)\/state$/);
+    if (stateMatch && (request.method === "GET" || request.method === "PATCH")) {
+      const auth = await userContext(request, env); if (!auth) return fail("Сессия не найдена", 401);
+      let payload = {};
+      if (request.method === "PATCH") { try { payload = await bodyJson(request, 32000); } catch { return fail("Некорректный JSON", 400); } }
+      const r = await forward(env.BLOCKVERSE.getByName("registry"), "/world-state?id=" + encodeURIComponent(stateMatch[1]) + "&ownerId=" + auth.userId, { method: request.method, headers: { "content-type": "application/json" }, body: request.method === "PATCH" ? JSON.stringify(payload) : undefined });
+      return new Response(await r.text(), { status: r.status, headers: { ...JSON_HEADERS, ...headers } });
+    }
     if (url.pathname === "/api/me" && request.method === "GET") {
       const auth = await userContext(request, env); if (!auth) return fail("Сессия не найдена", 401);
       const r = await forward(auth.stub, "/profile"); return new Response(await r.text(), { status: r.status, headers: { ...JSON_HEADERS, ...headers } });
@@ -98,6 +106,26 @@ export class BlockverseDurable extends DurableObject {
       const profile = await this.ctx.storage.get("profile"); if (!profile) return fail("Профиль не найден", 404);
       if (request.method === "GET") return json({ friends: profile.friends || [] });
       if (request.method === "POST") { const friend = await request.json(); const friends = profile.friends || []; if (friends.some(x => x.id === friend.id)) return fail("Игрок уже в друзьях", 409); friends.push({ id: friend.id, username: friend.username, avatar: friend.avatar, addedAt: new Date().toISOString() }); profile.friends = friends.slice(-200); await this.ctx.storage.put("profile", profile); return json({ friends: profile.friends }, 201); }
+    }
+    if (url.pathname === "/world-state") {
+      const id = url.searchParams.get("id") || "", ownerId = url.searchParams.get("ownerId") || "";
+      const worlds = await this.ctx.storage.get("worlds") || [], world = worlds.find(item => item.id === id);
+      if (!world || world.ownerId !== ownerId) return fail("Мир не найден или нет прав на редактирование", 404);
+      const key = "world-state:" + id;
+      if (request.method === "GET") return json({ blocks: await this.ctx.storage.get(key) || [] });
+      if (request.method === "PATCH") {
+        const data = await request.json(), blocks = data.blocks;
+        if (!Array.isArray(blocks) || blocks.length > 400) return fail("Допустимо не более 400 объектов", 422);
+        const safe = [];
+        for (const item of blocks) {
+          if (!item || !["cube","platform","tree","lamp"].includes(item.type)) return fail("Недопустимый тип объекта", 422);
+          const x = Number(item.x), y = Number(item.y), z = Number(item.z);
+          if (![x,y,z].every(Number.isFinite) || Math.abs(x) > 100 || y < 0 || y > 50 || Math.abs(z) > 100) return fail("Координаты вне границ мира", 422);
+          safe.push({ id: String(item.id || crypto.randomUUID()).slice(0,64), type: item.type, x, y, z });
+        }
+        await this.ctx.storage.put(key, safe);
+        return json({ saved: true, count: safe.length, blocks: safe });
+      }
     }
     if (url.pathname === "/worlds") {
       if (request.method === "GET") { const custom = await this.ctx.storage.get("worlds") || []; return json({ worlds: [...WORLD_SEEDS, ...custom] }); }
