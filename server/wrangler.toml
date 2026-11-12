@@ -1,0 +1,11 @@
+name = "blockverse-api"
+main = "worker.js"
+compatibility_date = "2026-11-12"
+
+[[durable_objects.bindings]]
+name = "BLOCKVERSE"
+class_name = "BlockverseDurable"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BlockverseDurable"]
