@@ -50,7 +50,7 @@ $$('.world-card').forEach(b=>b.addEventListener('click',()=>joinWorld(state.worl
 $('#profile-name')?.addEventListener('click',()=>showView('settings'));
 $('.profile').onclick=()=>showView('settings');
 $('.icon-btn').onclick=()=>showView('friends');
-$('#world-grid').addEventListener('click',e=>{const card=e.target.closest('[data-join]');if(card)joinWorld(card.dataset.join)});
+$('#world-grid').addEventListener('click',e=>{const card=e.target.closest('[data-join]');if(card)joinWorld(card.dataset.join)});$('#page-content').addEventListener('click',e=>{const card=e.target.closest('[data-join]');if(card)joinWorld(card.dataset.join)});
 search();
 boot();
 })();
