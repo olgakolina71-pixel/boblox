@@ -110,7 +110,7 @@ export class BlockverseDurable extends DurableObject {
     if (url.pathname === "/world-state") {
       const id = url.searchParams.get("id") || "", ownerId = url.searchParams.get("ownerId") || "";
       const worlds = await this.ctx.storage.get("worlds") || [], world = worlds.find(item => item.id === id);
-      if (!world || world.ownerId !== ownerId) return fail("Мир не найден или нет прав на редактирование", 404);
+      if (!world || (request.method === "PATCH" && world.ownerId !== ownerId)) return fail("Мир не найден или нет прав на редактирование", 404);
       const key = "world-state:" + id;
       if (request.method === "GET") return json({ blocks: await this.ctx.storage.get(key) || [] });
       if (request.method === "PATCH") {
